@@ -1,0 +1,6 @@
+# VS Code files
+.vscode/
+.dist/
+
+# Go hash files
+*.sum
