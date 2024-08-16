@@ -130,6 +130,11 @@ func ensureDataPath() {
 	}
 }
 
+// Check if a string represents a color
+func isColor(s string) bool {
+	return regexp.MustCompile(`^#([0-9A-Fa-f]{3}){1,2}$`).MatchString(s) || regexp.MustCompile(`^#([0-9A-Fa-f]{4}){1,2}$`).MatchString(s) || regexp.MustCompile(`^rgb\(\d{1,3},\d{1,3},\d{1,3}\)$`).MatchString(s) || regexp.MustCompile(`^rgba\(\d{1,3},\d{1,3},\d{1,3},\d?\.?\d+\)$`).MatchString(s) || regexp.MustCompile(`^hsl\(\d{1,3},\d{1,3}%,\d{1,3}%\)$`).MatchString(s) || regexp.MustCompile(`^hsla\(\d{1,3},\d{1,3}%,\d{1,3}%,\d?\.?\d+\)$`).MatchString(s)
+}
+
 // fonction de surveillance du presse-papiers
 func clipboardWatcher(ctx context.Context) {
 
@@ -182,7 +187,7 @@ func clipboardWatcher(ctx context.Context) {
 			hex.Encode(fileName, fileSha256[:])
 
 			fileNameString := base64.URLEncoding.EncodeToString(fileName)
-			fileNameString = string(fileNameString)[:20] + strconv.FormatInt(timestamp, 10)[5:]
+			fileNameString = string(fileNameString)[:20] + strconv.FormatInt(timestamp, 10)[5:] + ".png"
 
 			// Écrire l'image dans un fichier
 			err := os.WriteFile(filepath.Join(dataPath, "tmp", fileNameString), image, 0644)
@@ -213,10 +218,15 @@ func clipboardWatcher(ctx context.Context) {
 
 			// Déterminer si le texte copié est une URL (http:// ou https://), une couleur (#RRGGBB, #RGB, #RRGGBBAA ou #RGBA, rgb(), rgba(), hsl() ou hsla()), un mail (user@domain) ou un texte normal
 			dataType := "text"
-			if strings.HasPrefix(textString, "http://") || strings.HasPrefix(textString, "https://") {
+
+			// If the text is a URL
+			if strings.HasPrefix(textString, "http://") || strings.HasPrefix(textString, "https://") || strings.HasPrefix(textString, "mailto://") {
 				dataType = "url"
-			} else if regexp.MustCompile(`^#([0-9A-Fa-f]{3}){1,2}$`).MatchString(textString) || regexp.MustCompile(`^#([0-9A-Fa-f]{4}){1,2}$`).MatchString(textString) || regexp.MustCompile(`^rgb\(\d{1,3},\d{1,3},\d{1,3}\)$`).MatchString(textString) || regexp.MustCompile(`^rgba\(\d{1,3},\d{1,3},\d{1,3},\d?\.?\d+\)$`).MatchString(textString) || regexp.MustCompile(`^hsl\(\d{1,3},\d{1,3}%,\d{1,3}%\)$`).MatchString(textString) || regexp.MustCompile(`^hsla\(\d{1,3},\d{1,3}%,\d{1,3}%,\d?\.?\d+\)$`).MatchString(textString) {
+
+				// If the text is a color (check with raw copy and with all blank spaces removed)
+			} else if isColor(textString) || isColor(strings.ReplaceAll(strings.Trim(textString, " \n\r"), " ", "")) {
 				dataType = "color"
+				textString = strings.ReplaceAll(strings.Trim(textString, " \n\r"), " ", "")
 			} else if regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(textString) {
 				dataType = "mail"
 			}
@@ -289,39 +299,18 @@ func main() {
 		log.Fatalf("Impossible de se placer dans le répertoire du programme : %v", err)
 	}
 
-	// Créer un chemin absolu depuis la racine du disque
-	absPath, err := filepath.Abs("/")
+	// Get the absolute path of the executable directory
+	absPath, err := filepath.Abs(os.Args[0])
 	if err != nil {
-		log.Fatalf("Impossible de créer un chemin absolu depuis la racine du disque : %v", err)
+		log.Fatalf("Impossible d'obtenir le chemin absolu du répertoire de l'exécutable : %v", err)
 	}
-
-	absPath = path.Join(absPath, "Users", "Matheo", "Desktop", "ClipIT", "frontend.py")
-
-	println(absPath)
-
-	/*// Open a connection for the frontend
-	listener, err := net.Listen("tcp4", "localhost:22334")
-	if err != nil {
-		log.Fatalf("Impossible de se connecter au frontend : %v", err)
-	}
-
-	// Wait for the frontend to connect
-	socket, err = listener.Accept()
-
-	if err != nil {
-		log.Fatalf("Impossible de se connecter au frontend : %v", err)
-	}
-
-	// Handle the frontend connection  (and wait for it to close)
-	HandleFrontendConnection() */
 
 	// Démarrer la surveillance du presse-papiers dans une goroutine
 	wg.Add(1)
 	go clipboardWatcher(ctx)
 
-	// Start the frontend
 	// Lancer l'interface graphique et attendre qu'elle se ferme
-	cmd := exec.Command("C:\\Users\\Matheo\\AppData\\Local\\Microsoft\\WindowsApps\\python3.exe", absPath)
+	cmd := exec.Command(path.Join(filepath.Dir(absPath), "frontend.exe"))
 	output, cmd_err := cmd.Output()
 	if cmd_err != nil {
 		log.Fatalf("Une erreur est survenu avec l'interface : %v", cmd_err)

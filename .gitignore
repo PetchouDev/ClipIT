@@ -4,3 +4,12 @@
 
 # Go hash files
 *.sum
+
+# PyInstaller files
+dist/
+build/
+
+# Build files
+packages/
+frontend.spec
+rsrc_windows_amd64.syso
