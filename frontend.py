@@ -6,8 +6,7 @@ import time
 import pathlib
 import datetime
 import sqlite3
-import subprocess   
-import io
+import asyncio
 
 from threading import Thread
 
@@ -302,7 +301,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         header_layout.addStretch(1)
 
         # Load the font awesome file to allow use of icons
-        print(BASE_DIR / 'font.ttf')
         font = QtGui.QFontDatabase.addApplicationFont(str(BASE_DIR / 'font.ttf'))
         self.fontawesome = QtGui.QFontDatabase.applicationFontFamilies(font)[0]
 
@@ -744,13 +742,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             pyperclip.copy(item.data)
 
-        self.hibernate()
+        # send paste shortcut to the system after a delay
+        Thread(target=send_paste).start()
 
         # Delete the item from the database
         self.database.delete(item)
+        self.hibernate()
 
         # wait a bit to let the clipboard update
-        time.sleep(0.4)
+        time.sleep(0.2)
 
         # Delete the item from the clipboard layout
         self.clipboardLayout.removeWidget(frame)
@@ -789,7 +789,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.sleeping = False
         print('Waking up')
 
-
     def exit(self):
         self.tray_icon.hide()
         print('Tray icon terminated')
@@ -798,6 +797,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         QtCore.QCoreApplication.instance().quit()
         print('Application terminated')
         sys.exit()
+
+def send_paste():
+    time.sleep(0.2)
+    print('Pasting')
+    keyboard.press_and_release('ctrl+v')
+    print('Pasted')
 
 
 # Stretch a QPixmap to fit a QSize from the center while keeping the aspect ratio

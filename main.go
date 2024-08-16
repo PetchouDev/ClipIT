@@ -203,6 +203,9 @@ func clipboardWatcher(ctx context.Context) {
 
 			println("Image copiée : ", fileNameString)
 
+			// Mettre à jour la dernière image copiée
+			lastImage = fileSha256
+
 		// Cas où un texte a été copié
 		case text := <-textChannel:
 			// Convertir les bytes en string
@@ -242,6 +245,9 @@ func clipboardWatcher(ctx context.Context) {
 
 			println("Texte copié : ", textString, " (", dataType, ")")
 
+			// Mettre à jour le dernier texte copié
+			lastText = textString
+
 		}
 	}
 
@@ -256,22 +262,6 @@ func deleteOldItems() {
 
 	// TODO: Implémenter la suppression des éléments de l'historique du presse-papiers qui sont plus anciens que le nombre de jours à conserver
 }
-
-/* // Handle the frontend connection
-func HandleFrontendConnection() {
-	// While the frontend is connected, check if it has sent an id of an item to push to the clipboard
-	for {
-		// Check if the frontend is still connected
-		_, err := socket.Write([]byte("ping"))
-		if err != nil {
-			println("Frontend disconnected.")
-			return
-		}
-
-		// Wait a bit before checking again (to avoid high CPU usage)
-		time.Sleep(10 * time.Millisecond)
-	}
-} */
 
 func main() {
 	// Vérifier que le répertoire de sauvegarde existe, le créer s'il n'existe pas et attribuer le chemin du fichier de sauvegarde
